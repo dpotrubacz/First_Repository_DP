@@ -9,6 +9,7 @@ import { useExpenseModal } from "@/components/AppShell";
 import { EMPTY_FILTERS, ExpenseFilters } from "@/components/ExpenseFilters";
 import { ExpenseList, ExpenseListSkeleton } from "@/components/ExpenseList";
 import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { filterExpenses, sortExpenses, sumAmounts } from "@/lib/analytics";
 import { downloadCsv } from "@/lib/csv";
 import { formatCurrency, todayISO } from "@/lib/format";
@@ -16,7 +17,7 @@ import { formatCurrency, todayISO } from "@/lib/format";
 const PAGE_SIZE = 25;
 
 export function ExpensesView() {
-  const { expenses, isLoading } = useExpenses();
+  const { expenses, isLoading, clearAll, restoreAll } = useExpenses();
   const { openCreate, openEdit } = useExpenseModal();
   const { requestDelete, dialog } = useDeleteExpense();
   const { toast } = useToast();
@@ -24,6 +25,7 @@ export function ExpensesView() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<SortKey>("date-desc");
   const [visible, setVisible] = useState(PAGE_SIZE);
+  const [confirmClear, setConfirmClear] = useState(false);
   const deferredFilters = useDeferredValue(filters);
 
   const filtered = useMemo(
@@ -51,6 +53,16 @@ export function ExpensesView() {
     }
   };
 
+  const handleClearAll = () => {
+    const removed = clearAll();
+    setConfirmClear(false);
+    changeFilters(EMPTY_FILTERS);
+    toast(`Deleted all ${removed.length} expense${removed.length === 1 ? "" : "s"}.`, {
+      variant: "info",
+      action: { label: "Undo", onClick: () => restoreAll(removed) },
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -58,7 +70,15 @@ export function ExpensesView() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Expenses</h1>
           <p className="mt-1 text-sm text-slate-500">Search, filter, edit, and export your transactions.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setConfirmClear(true)}
+            disabled={isLoading || expenses.length === 0}
+            className="btn-secondary flex-1 text-red-600 hover:bg-red-50 sm:flex-none"
+          >
+            Clear all
+          </button>
           <button type="button" onClick={exportCsv} disabled={isLoading || expenses.length === 0} className="btn-secondary flex-1 sm:flex-none">
             <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
               <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
@@ -125,6 +145,14 @@ export function ExpensesView() {
         )}
       </section>
       {dialog}
+      <ConfirmDialog
+        open={confirmClear}
+        title="Delete all expenses?"
+        message={`All ${expenses.length} expenses (${formatCurrency(sumAmounts(expenses))}) will be removed from this browser. Export a CSV first if you want a backup.`}
+        confirmLabel="Delete all"
+        onConfirm={handleClearAll}
+        onCancel={() => setConfirmClear(false)}
+      />
     </div>
   );
 }

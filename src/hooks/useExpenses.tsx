@@ -22,7 +22,9 @@ interface ExpensesContextValue {
   updateExpense: (id: string, input: ExpenseInput) => void;
   deleteExpense: (id: string) => Expense | undefined;
   restoreExpense: (expense: Expense) => void;
-  clearAll: () => void;
+  /** Removes every expense and returns what was removed, so it can be restored. */
+  clearAll: () => Expense[];
+  restoreAll: (expenses: Expense[]) => void;
 }
 
 const ExpensesContext = createContext<ExpensesContextValue | null>(null);
@@ -116,7 +118,18 @@ export function ExpensesProvider({ children }: { children: ReactNode }) {
     setExpenses((prev) => (prev.some((e) => e.id === expense.id) ? prev : [expense, ...prev]));
   }, []);
 
-  const clearAll = useCallback(() => setExpenses([]), []);
+  const clearAll = useCallback(() => {
+    const removed = expenses;
+    setExpenses([]);
+    return removed;
+  }, [expenses]);
+
+  const restoreAll = useCallback((restored: Expense[]) => {
+    setExpenses((prev) => {
+      const ids = new Set(prev.map((e) => e.id));
+      return [...prev, ...restored.filter((e) => !ids.has(e.id))];
+    });
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -129,8 +142,20 @@ export function ExpensesProvider({ children }: { children: ReactNode }) {
       deleteExpense,
       restoreExpense,
       clearAll,
+      restoreAll,
     }),
-    [expenses, isLoading, error, addExpense, addMany, updateExpense, deleteExpense, restoreExpense, clearAll],
+    [
+      expenses,
+      isLoading,
+      error,
+      addExpense,
+      addMany,
+      updateExpense,
+      deleteExpense,
+      restoreExpense,
+      clearAll,
+      restoreAll,
+    ],
   );
 
   return <ExpensesContext.Provider value={value}>{children}</ExpensesContext.Provider>;

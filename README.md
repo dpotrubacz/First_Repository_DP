@@ -14,6 +14,7 @@ A modern personal expense tracker built with **Next.js 14 (App Router)**, **Type
   - Recent expenses
 - **Expense list** with search, category filter, date range (plus quick presets), sorting, running totals, and "show more" pagination
 - **CSV export** of the currently filtered expenses. The file opens in Excel with UTF-8 support and is protected against formula injection.
+- **Clear all** to delete every expense at once (with confirmation and Undo)
 - **Undo** after deleting, toast notifications, confirm dialogs, loading skeletons, empty states, and storage error banners
 - **Responsive**, with a bottom tab bar and a floating add button on mobile
 - Sync across browser tabs, plus a **sample data** loader for trying the app out
@@ -52,8 +53,19 @@ npm run typecheck
 7. **Delete + Undo**: click the trash icon, confirm, then click **Undo** in the toast.
 8. **Filters**: go to **Expenses**. Search for "coffee", choose a category, pick a start and end date or a preset like *Last 30 days*, and change the sort order. The header shows the count and total of the matching expenses.
 9. **Export**: click **Export CSV**. The downloaded file contains only the filtered expenses.
-10. **Persistence**: reload the page. Everything is still there. Open a second tab, and changes sync between them.
-11. **Mobile**: use DevTools device mode (e.g. iPhone 14). Navigation moves to a bottom bar and the form opens as a bottom sheet.
+10. **Clear all**: on **Expenses**, click **Clear all** and confirm. Every expense is removed, and **Undo** in the notification brings them back.
+11. **Persistence**: reload the page. Everything is still there. Open a second tab, and changes sync between them.
+12. **Mobile**: use DevTools device mode (e.g. iPhone 14). Navigation moves to a bottom bar and the form opens as a bottom sheet.
+
+## Publishing as a claude.ai artifact
+
+`npm run build:artifact` builds a single-file version of the app at `artifact/dist/spendwise.html`, ready to publish as a claude.ai artifact. That version differs from the Next.js app in three ways, all handled by the shims in `artifact/shims/`:
+
+- Pages switch through `#dashboard` and `#expenses` links instead of separate URLs.
+- **Export CSV** opens the CSV text with a **Copy CSV** button, because the artifact viewer blocks file downloads.
+- React loads from cdnjs (same version as `package.json`); everything else is inlined.
+
+Expenses entered in the published page are saved in that browser only, separately from the local app.
 
 ## Project structure
 
@@ -77,6 +89,10 @@ src/
     storage.ts            localStorage read/write with schema checks
     sampleData.ts         Demo data generator
   types/expense.ts        Shared types and categories
+artifact/
+  build.mjs               Single-file artifact build (esbuild + Tailwind)
+  entry.tsx               Artifact entry: hash routing and CSV copy dialog
+  shims/                  Replacements for next/link, next/navigation, CSV download, React globals
 ```
 
 ## Notes
